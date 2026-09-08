@@ -1,39 +1,39 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""从 engine.py 重新生成「盲玩版」fishing.py。
+"""從 engine.py 重新生成「盲玩版」fishing.py。
 
-engine.py 是可读的引擎源码；fishing.py 把它打包进一段 base64，
-让 AI 玩的时候只看得到 cmd()/new_game() 接口、读不到鱼谱/概率（防剧透）。
+engine.py 是可讀的引擎源碼；fishing.py 把它打包進一段 base64，
+讓 AI 玩的時候只看得到 cmd()/new_game() 介面、讀不到魚譜/機率（防劇透）。
 
-什么时候跑：你改了 engine.py（加鱼、改数值…）之后，跑一下让 fishing.py 跟上：
+什麼時候跑：你改了 engine.py（加魚、改數值…）之後，跑一下讓 fishing.py 跟上：
 
     python build_blind.py
 
-两份文件逻辑永远一致——fishing.py 的内容就是 engine.py 的 base64 而已。
+兩份檔案邏輯永遠一致——fishing.py 的內容就是 engine.py 的 base64 而已。
 """
 import base64
 import pathlib
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-# 盲玩版文件顶部的说明（给 AI 玩家看的）。引擎本体在它下面的 _BLOB 里。
-HEADER = '''"""🎣 文字钓鱼游戏 · 盲玩版
+# 盲玩版檔案頂部的說明（給 AI 玩家看的）。引擎本體在它下面的 _BLOB 裡。
+HEADER = '''"""🎣 文字釣魚遊戲 · 盲玩版
 
-【给 AI 玩家的说明】
-你是这个游戏的「玩家」，不是开发者。像真的在钓鱼一样、靠 cmd() 返回的文字去体验和决策：
+【給 AI 玩家的說明】
+你是這個遊戲的「玩家」，不是開發者。像真的在釣魚一樣、靠 cmd() 回傳的文字去體驗和決策：
 
     import fishing
-    print(fishing.cmd("help"))      # 看规则
-    print(fishing.cmd("status"))    # 看当前状态
-    print(fishing.cmd("cast"))      # 抛竿……看钓到什么
-    print(fishing.cmd("cast 10"))   # 一次连钓 10 竿，只回一个汇总（省来回）
-    # 然后按结果决定下一步：buy / cast / goto / sell / encyclopedia ……
+    print(fishing.cmd("help"))      # 看規則
+    print(fishing.cmd("status"))    # 看當前狀態
+    print(fishing.cmd("cast"))      # 拋竿……看釣到什麼
+    print(fishing.cmd("cast 10"))   # 一次連釣 10 竿，只回一個彙總（省來回）
+    # 然後按結果決定下一步：buy / cast / goto / sell / encyclopedia ……
 
-⚠️ 请不要去解码 / 查看下面的 _BLOB（那是游戏引擎，提前看了就剧透了——你会提前
-知道有哪些鱼、稀有鱼在哪、概率多少）。当个蒙着眼的玩家，靠抛竿去发现。
-（想读 / 改引擎源码，看同目录的 engine.py。）
+⚠️ 請不要去解碼 / 查看下面的 _BLOB（那是遊戲引擎，提前看了就劇透了——你會提前
+知道有哪些魚、稀有魚在哪、機率多少）。當個蒙著眼的玩家，靠拋竿去發現。
+（想讀 / 改引擎源碼，看同目錄的 engine.py。）
 
-接口：fishing.cmd("指令") 返回结果文字；fishing.new_game(种子) 重开一局。
+介面：fishing.cmd("指令") 回傳結果文字；fishing.new_game(種子) 重開一局。
 """'''
 
 
@@ -49,7 +49,7 @@ def build():
         + "if __name__ == \"__main__\":\n    print(cmd(\"help\"))\n    print()\n    print(cmd(\"status\"))\n"
     )
     (HERE / "fishing.py").write_text(out, encoding="utf-8")
-    print("✅ 已从 engine.py 重新生成 fishing.py（%d 字节）" % len(out))
+    print("✅ 已從 engine.py 重新生成 fishing.py（%d 位元組）" % len(out))
 
 
 if __name__ == "__main__":
