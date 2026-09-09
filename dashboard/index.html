@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>霽野的釣魚池</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a1420; --bg2:#0f1e2e; --panel:#12263a; --panel2:#16304a;
+  --line:#25455f; --line2:#356a8f;
+  --ink:#e8f4ff; --ink-dim:#8fb0c8; --ink-faint:#7196b0;
+  --accent:#4fe0c0; --accent2:#ffd166; --shadow:#050b12;
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);
+  background-image:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px),
+    radial-gradient(120% 80% at 50% 0%,#14293e 0%,#0a1420 60%);
+  color:var(--ink);
+  font-family:"Courier New",ui-monospace,"DejaVu Sans Mono","Noto Sans TC","Microsoft JhengHei",monospace;
+  font-size:14px;line-height:1.5;letter-spacing:.02em;
+  padding:14px 12px 48px;
+}
+.wrap{max-width:1080px;margin:0 auto}
+header{
+  border:2px solid var(--line2);background:var(--panel);
+  box-shadow:4px 4px 0 var(--shadow);padding:14px 14px 12px;margin-bottom:12px;
+}
+h1{
+  font-size:20px;letter-spacing:.16em;color:var(--accent);
+  text-shadow:2px 2px 0 var(--shadow);margin-bottom:8px;
+}
+h1 .rod{color:var(--accent2)}
+.headmeta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--ink-dim);font-size:12px}
+.headmeta b{color:var(--ink)}
+.hprog{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hprog .label{font-size:12px;color:var(--ink-dim);letter-spacing:.1em}
+.hprog .big{font-size:18px;color:var(--accent2);text-shadow:2px 2px 0 var(--shadow)}
+nav{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+nav button{
+  flex:1 1 auto;min-width:96px;cursor:pointer;font:inherit;font-size:13px;letter-spacing:.1em;
+  color:var(--ink-dim);background:var(--panel);border:2px solid var(--line);
+  box-shadow:3px 3px 0 var(--shadow);padding:9px 10px;
+}
+nav button:hover{color:var(--ink);border-color:var(--line2)}
+nav button[aria-selected="true"]{
+  color:var(--bg);background:var(--accent);border-color:var(--accent);
+  box-shadow:0 0 0 var(--shadow);transform:translate(3px,3px);
+}
+.panel{display:none}
+.panel.show{display:block}
+.panelhead{
+  display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;
+  border-left:4px solid var(--accent);padding:2px 0 2px 10px;margin-bottom:10px;
+}
+.ph-title{font-size:15px;letter-spacing:.2em}
+.ph-sub{font-size:12px;color:var(--ink-dim)}
+.ph-sub b{color:var(--accent2)}
+.ph-right{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  font-size:11px;padding:3px 7px;border:1px solid var(--c);color:var(--c);
+  background:rgba(0,0,0,.25);
+}
+.chip b{color:var(--ink)}
+.pbar{display:flex;align-items:center;gap:2px;margin-bottom:14px}
+.pbar i{flex:1 1 0;height:14px;border:1px solid var(--line);background:#0b1a28}
+.pbar i.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 1px var(--shadow) inset}
+.pbar em{font-style:normal;margin-left:8px;font-size:12px;color:var(--accent);min-width:34px;text-align:right}
+.grid{display:grid;gap:8px}
+.dex{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}
+.maps{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.cell{
+  border:2px solid var(--line);background:var(--panel);
+  box-shadow:3px 3px 0 var(--shadow);padding:8px;position:relative;min-height:96px;
+}
+.cell .num{font-size:10px;color:var(--ink-faint);letter-spacing:.1em}
+.cell.got{
+  border:2px solid var(--c);background:#102235;
+  box-shadow:3px 3px 0 var(--shadow),0 0 10px -2px var(--c);
+}
+.cell.got .fname{font-size:14px;margin:3px 0 4px;color:var(--ink);word-break:break-all}
+.cell.got .rar{font-size:11px;color:var(--c);margin-bottom:6px}
+.cell.got .tag{
+  display:inline-block;margin-left:5px;padding:0 4px;border:1px solid var(--c);
+  font-size:10px;line-height:14px;
+}
+.cell.got .stat{display:flex;justify-content:space-between;font-size:11px;color:#7ea4bf}
+.cell.got .stat b{color:var(--ink);font-weight:normal}
+.cell.locked{
+  border:2px solid #142230;border-top-color:#081018;border-left-color:#081018;
+  background:#07111b;box-shadow:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+}
+.cell.locked .num{position:absolute;top:6px;left:8px;color:#2b4a63}
+.cell.locked .silhouette{
+  font-size:18px;letter-spacing:.18em;color:#183248;opacity:.6;text-shadow:2px 2px 0 #050c14;
+}
+.cell.locked .silhouette span{color:#1d3c55}
+.cell.locked .lockedtag{font-size:10px;color:#28485f;letter-spacing:.16em}
+.cell.loc{min-height:auto;display:block}
+.cell.loc.here{border-color:var(--accent)}
+.cell.loc.open{border-color:var(--line2)}
+.loc-top{display:flex;align-items:baseline;gap:7px;margin-bottom:5px}
+.loc-top .mark{color:var(--accent2)}
+.loc-name{font-size:14px;letter-spacing:.06em}
+.loc-name small{font-size:10px;color:var(--ink-faint);letter-spacing:.1em}
+.loc-desc{font-size:11px;color:var(--ink-faint);line-height:1.6;margin-bottom:8px}
+.loc-meta{display:flex;flex-wrap:wrap;gap:5px}
+.loc-cost{font-size:12px;color:var(--accent2);letter-spacing:.08em}
+.badge{
+  font-size:10px;padding:2px 6px;border:1px solid var(--line2);color:var(--ink-dim);
+  background:rgba(0,0,0,.2);display:inline-flex;align-items:center;gap:5px;
+}
+.badge.dive-on{border-color:var(--accent);color:var(--accent)}
+.badge.dive-off{border-color:#6a5a2e;color:var(--accent2)}
+.pips{display:inline-flex;gap:2px}
+.pips i{width:6px;height:10px;border:1px solid var(--line2);display:block}
+.pips i.on{background:var(--accent2);border-color:var(--accent2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;margin-bottom:10px}
+.scard{border:2px solid var(--line);background:var(--panel);box-shadow:3px 3px 0 var(--shadow);padding:9px 10px}
+.s-label{font-size:11px;color:var(--ink-faint);letter-spacing:.12em}
+.s-value{font-size:20px;color:var(--accent2);text-shadow:2px 2px 0 var(--shadow);margin:2px 0}
+.s-sub{font-size:10px;color:var(--ink-faint)}
+.tallyrow{
+  display:flex;flex-wrap:wrap;gap:6px 18px;font-size:11px;color:var(--ink-faint);
+  border:2px solid #1b3247;border-top-color:#0c1a27;border-left-color:#0c1a27;
+  background:rgba(0,0,0,.22);padding:8px 10px;margin-bottom:12px;
+}
+.tallyrow b{color:var(--ink-dim);font-weight:normal}
+.boxes{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.box{border:2px solid var(--line);background:var(--panel);box-shadow:3px 3px 0 var(--shadow);padding:10px}
+.box h3{font-size:12px;letter-spacing:.14em;color:var(--accent);margin-bottom:8px;font-weight:normal}
+.list{list-style:none;display:flex;flex-direction:column;gap:5px}
+.list li{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  font-size:12px;border-bottom:1px dotted #22405a;padding-bottom:4px;
+}
+.list li:last-child{border-bottom:0;padding-bottom:0}
+.li-name{color:var(--ink)}
+.li-name small{color:var(--ink-faint);font-size:10px}
+.li-meta{color:var(--ink-faint);font-size:11px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.empty{font-size:11px;color:var(--ink-faint);padding:4px 0}
+footer{margin-top:22px;font-size:10px;color:var(--ink-faint);text-align:center;letter-spacing:.1em}
+@media (max-width:480px){
+  body{font-size:13px;padding:10px 8px 40px}
+  h1{font-size:17px}
+  .dex{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}
+  .cell{min-height:88px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="rod">🎣</span> 霽野的釣魚池</h1>
+    <div class="headmeta">
+      <span>存檔 <b>26-09-08 21:05</b></span>
+      <span>回合 <b>103</b></span>
+      <span>季節 <b>夏</b></span>
+      <span>所在 <b>間歇泉瀑布</b></span>
+      <span>點數 <b>1815</b></span>
+    </div>
+    <div class="hprog">
+      <span class="label">圖鑑進度</span>
+      <span class="big">18 / 81</span>
+    </div>
+  </header>
+
+  <nav role="tablist">
+    <button type="button" role="tab" data-target="tab-dex" aria-selected="true">📖 圖鑑</button>
+    <button type="button" role="tab" data-target="tab-map" aria-selected="false">🗺️ 釣點地圖</button>
+    <button type="button" role="tab" data-target="tab-bag" aria-selected="false">🎒 背包</button>
+  </nav>
+
+  <div class="panel show" id="tab-dex">
+    <div class="panelhead">
+      <div class="ph-left">
+        <div class="ph-title">圖鑑</div>
+        <div class="ph-sub">已收錄 <b>18</b> / 81 種</div>
+      </div>
+      <div class="ph-right"><span class="chip" style="--c:#8fa3b0">常見 <b>9</b></span><span class="chip" style="--c:#5fd07a">少見 <b>8</b></span><span class="chip" style="--c:#4fa8ff">稀有 <b>1</b></span></div>
+    </div>
+    <div class="pbar" role="img" aria-label="圖鑑進度 22%"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><em>22%</em></div>
+    <div class="grid dex"><div class="cell locked"><div class="num">#01</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#02</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#03</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#5fd07a"><div class="num">#04</div><div class="fname">熱泉晶螺</div><div class="rar">少見<span class="tag">U</span></div><div class="stat"><span>最大</span><b>10.7 cm</b></div><div class="stat"><span>捕獲</span><b>3 次</b></div><div class="stat"><span>初遇</span><b>第 100 回合</b></div></div><div class="cell got" style="--c:#5fd07a"><div class="num">#05</div><div class="fname">餘燼泥鰍</div><div class="rar">少見<span class="tag">U</span></div><div class="stat"><span>最大</span><b>27.2 cm</b></div><div class="stat"><span>捕獲</span><b>4 次</b></div><div class="stat"><span>初遇</span><b>第 80 回合</b></div></div><div class="cell locked"><div class="num">#06</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#07</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#08</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#5fd07a"><div class="num">#09</div><div class="fname">暮色鰻</div><div class="rar">少見<span class="tag">U</span></div><div class="stat"><span>最大</span><b>42.8 cm</b></div><div class="stat"><span>捕獲</span><b>4 次</b></div><div class="stat"><span>初遇</span><b>第 7 回合</b></div></div><div class="cell locked"><div class="num">#10</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#11</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#5fd07a"><div class="num">#12</div><div class="fname">銅魴</div><div class="rar">少見<span class="tag">U</span></div><div class="stat"><span>最大</span><b>34.9 cm</b></div><div class="stat"><span>捕獲</span><b>3 次</b></div><div class="stat"><span>初遇</span><b>第 22 回合</b></div></div><div class="cell locked"><div class="num">#13</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#14</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#15</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#16</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#17</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#18</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#19</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#20</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#21</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#22</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#23</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#8fa3b0"><div class="num">#24</div><div class="fname">泥鯉</div><div class="rar">常見<span class="tag">C</span></div><div class="stat"><span>最大</span><b>33 cm</b></div><div class="stat"><span>捕獲</span><b>4 次</b></div><div class="stat"><span>初遇</span><b>第 6 回合</b></div></div><div class="cell locked"><div class="num">#25</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#5fd07a"><div class="num">#26</div><div class="fname">蒸汽鰩</div><div class="rar">少見<span class="tag">U</span></div><div class="stat"><span>最大</span><b>55.8 cm</b></div><div class="stat"><span>捕獲</span><b>3 次</b></div><div class="stat"><span>初遇</span><b>第 39 回合</b></div></div><div class="cell locked"><div class="num">#27</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#28</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#29</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#30</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#31</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#32</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#33</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#34</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#35</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#36</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#37</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#38</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#39</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#40</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#41</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#8fa3b0"><div class="num">#42</div><div class="fname">幽靈蝦</div><div class="rar">常見<span class="tag">C</span></div><div class="stat"><span>最大</span><b>9.4 cm</b></div><div class="stat"><span>捕獲</span><b>8 次</b></div><div class="stat"><span>初遇</span><b>第 10 回合</b></div></div><div class="cell got" style="--c:#8fa3b0"><div class="num">#43</div><div class="fname">鯽魚</div><div class="rar">常見<span class="tag">C</span></div><div class="stat"><span>最大</span><b>18.3 cm</b></div><div class="stat"><span>捕獲</span><b>6 次</b></div><div class="stat"><span>初遇</span><b>第 8 回合</b></div></div><div class="cell locked"><div class="num">#44</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#45</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#46</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#47</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#4fa8ff"><div class="num">#48</div><div class="fname">岩漿蠑螈</div><div class="rar">稀有<span class="tag">R</span></div><div class="stat"><span>最大</span><b>49.2 cm</b></div><div class="stat"><span>捕獲</span><b>2 次</b></div><div class="stat"><span>初遇</span><b>第 50 回合</b></div></div><div class="cell got" style="--c:#5fd07a"><div class="num">#49</div><div class="fname">影殼蝸</div><div class="rar">少見<span class="tag">U</span></div><div class="stat"><span>最大</span><b>10.8 cm</b></div><div class="stat"><span>捕獲</span><b>2 次</b></div><div class="stat"><span>初遇</span><b>第 36 回合</b></div></div><div class="cell locked"><div class="num">#50</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#51</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#5fd07a"><div class="num">#52</div><div class="fname">間歇泉龍</div><div class="rar">少見<span class="tag">U</span></div><div class="stat"><span>最大</span><b>69.9 cm</b></div><div class="stat"><span>捕獲</span><b>5 次</b></div><div class="stat"><span>初遇</span><b>第 66 回合</b></div></div><div class="cell locked"><div class="num">#53</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#54</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#8fa3b0"><div class="num">#55</div><div class="fname">礦屑魨</div><div class="rar">常見<span class="tag">C</span></div><div class="stat"><span>最大</span><b>11.3 cm</b></div><div class="stat"><span>捕獲</span><b>2 次</b></div><div class="stat"><span>初遇</span><b>第 99 回合</b></div></div><div class="cell locked"><div class="num">#56</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#57</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#8fa3b0"><div class="num">#58</div><div class="fname">月光鯰</div><div class="rar">常見<span class="tag">C</span></div><div class="stat"><span>最大</span><b>14 cm</b></div><div class="stat"><span>捕獲</span><b>1 次</b></div><div class="stat"><span>初遇</span><b>第 37 回合</b></div></div><div class="cell got" style="--c:#8fa3b0"><div class="num">#59</div><div class="fname">螢鱗鰷</div><div class="rar">常見<span class="tag">C</span></div><div class="stat"><span>最大</span><b>12.9 cm</b></div><div class="stat"><span>捕獲</span><b>7 次</b></div><div class="stat"><span>初遇</span><b>第 2 回合</b></div></div><div class="cell locked"><div class="num">#60</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#61</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#62</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#63</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#64</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#65</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#66</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#67</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#68</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#5fd07a"><div class="num">#69</div><div class="fname">蘆葦鱸</div><div class="rar">少見<span class="tag">U</span></div><div class="stat"><span>最大</span><b>26 cm</b></div><div class="stat"><span>捕獲</span><b>1 次</b></div><div class="stat"><span>初遇</span><b>第 21 回合</b></div></div><div class="cell locked"><div class="num">#70</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#71</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#8fa3b0"><div class="num">#72</div><div class="fname">焦鱗燈魚</div><div class="rar">常見<span class="tag">C</span></div><div class="stat"><span>最大</span><b>15 cm</b></div><div class="stat"><span>捕獲</span><b>22 次</b></div><div class="stat"><span>初遇</span><b>第 46 回合</b></div></div><div class="cell got" style="--c:#8fa3b0"><div class="num">#73</div><div class="fname">冬燼魚</div><div class="rar">常見<span class="tag">C</span></div><div class="stat"><span>最大</span><b>13.5 cm</b></div><div class="stat"><span>捕獲</span><b>10 次</b></div><div class="stat"><span>初遇</span><b>第 60 回合</b></div></div><div class="cell locked"><div class="num">#74</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#75</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#76</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#77</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#78</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell locked"><div class="num">#79</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div><div class="cell got" style="--c:#8fa3b0"><div class="num">#80</div><div class="fname">硫華鱂</div><div class="rar">常見<span class="tag">C</span></div><div class="stat"><span>最大</span><b>11.6 cm</b></div><div class="stat"><span>捕獲</span><b>11 次</b></div><div class="stat"><span>初遇</span><b>第 40 回合</b></div></div><div class="cell locked"><div class="num">#81</div><div class="silhouette">?<span>?</span>?</div><div class="lockedtag">未收錄</div></div></div>
+    </div>
+  <div class="panel" id="tab-map">
+    <div class="panelhead">
+      <div class="ph-left">
+        <div class="ph-title">釣點地圖</div>
+        <div class="ph-sub">已解鎖 <b>3</b> / 11 處　·　潛水點 <b>2</b> 處</div>
+      </div>
+    </div>
+    <div class="grid maps"><div class="cell loc here"><div class="loc-top"><span class="mark">✦</span><span class="loc-name">間歇泉瀑布</span></div><div class="loc-desc">層層熱泉自岩壁噴湧而下匯成溫瀑，蒸汽終年不散，再冷的天這裡也暖意融融。</div><div class="loc-meta"><span class="badge">季節 春・夏・秋・冬</span><span class="badge dive-on">🤿 潛水已解鎖</span></div></div><div class="cell loc open"><div class="loc-top"><span class="mark">·</span><span class="loc-name">月光池塘</span></div><div class="loc-desc">一汪靜謐的池水，倒映著永遠停在黃昏的天空。水面偶有漣漪，像有什麼在月色下游動。</div><div class="loc-meta"><span class="badge">季節 春・夏・秋・冬</span><span class="badge dive-on">🤿 潛水已解鎖</span></div></div><div class="cell loc open"><div class="loc-top"><span class="mark">·</span><span class="loc-name">蘆葦河</span></div><div class="loc-desc">兩岸蘆葦沙沙作響，水流緩慢清澈，是練手的好去處。</div><div class="loc-meta"><span class="badge">季節 春・夏・秋・冬</span><span class="badge dive-off">🧩 藏寶圖 1/3 <span class="pips"><i class="on"></i><i class="off"></i><i class="off"></i></span></span></div></div><div class="cell loc locked"><div class="loc-top"><span class="mark">🔒</span><span class="loc-name">??? <small>祕境 01</small></span></div><div class="loc-cost">200 點解鎖</div></div><div class="cell loc locked"><div class="loc-top"><span class="mark">🔒</span><span class="loc-name">??? <small>祕境 02</small></span></div><div class="loc-cost">300 點解鎖</div></div><div class="cell loc locked"><div class="loc-top"><span class="mark">🔒</span><span class="loc-name">??? <small>祕境 03</small></span></div><div class="loc-cost">320 點解鎖</div></div><div class="cell loc locked"><div class="loc-top"><span class="mark">🔒</span><span class="loc-name">??? <small>祕境 04</small></span></div><div class="loc-cost">480 點解鎖</div></div><div class="cell loc locked"><div class="loc-top"><span class="mark">🔒</span><span class="loc-name">??? <small>祕境 05</small></span></div><div class="loc-cost">550 點解鎖</div></div><div class="cell loc locked"><div class="loc-top"><span class="mark">🔒</span><span class="loc-name">??? <small>祕境 06</small></span></div><div class="loc-cost">600 點解鎖</div></div><div class="cell loc locked"><div class="loc-top"><span class="mark">🔒</span><span class="loc-name">??? <small>祕境 07</small></span></div><div class="loc-cost">650 點解鎖</div></div><div class="cell loc locked"><div class="loc-top"><span class="mark">🔒</span><span class="loc-name">??? <small>祕境 08</small></span></div><div class="loc-cost">800 點解鎖</div></div></div>
+    </div>
+  <div class="panel" id="tab-bag">
+    <div class="panelhead">
+      <div class="ph-left">
+        <div class="ph-title">背包</div>
+        <div class="ph-sub">身家 <b>1815</b> 點</div>
+      </div>
+    </div>
+    <div class="cards"><div class="scard"><div class="s-label">點數</div><div class="s-value">1815</div><div class="s-sub">手上現金</div></div><div class="scard"><div class="s-label">身家</div><div class="s-value">1815</div><div class="s-sub">現金＋漁簍＋寶物</div></div><div class="scard"><div class="s-label">回合</div><div class="s-value">103</div><div class="s-sub">總拋竿 95</div></div><div class="scard"><div class="s-label">季節</div><div class="s-value">夏</div><div class="s-sub">本季第 3 / 20 竿</div></div><div class="scard"><div class="s-label">所在</div><div class="s-value">間歇泉瀑布</div><div class="s-sub">圖鑑 18/81</div></div><div class="scard"><div class="s-label">氧氣瓶</div><div class="s-value">0</div><div class="s-sub">總下潛 8 次</div></div></div>
+    <div class="tallyrow"><span>總捕獲 <b>98</b></span><span>開箱 <b>2</b></span><span>下潛 <b>8</b></span><span>拋竿 <b>95</b></span></div>
+    <div class="boxes">
+      <section class="box"><h3>🐟 漁簍</h3><div class="empty">漁簍空空——賣光了，或還沒開釣。</div></section>
+      <section class="box"><h3>🪱 魚餌</h3><ul class="list"><li><span class="li-name">普通蚯蚓</span><span class="li-meta">×4</span></li></ul></section>
+      <section class="box"><h3>💎 寶物</h3><div class="empty">還沒撈到寶物。</div></section>
+      <section class="box"><h3>🍾 漂流瓶</h3><ul class="list"><li><span class="li-name">漂流瓶</span><span class="li-meta"><span class="pips"><i class="on"></i><i class="on"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i></span> 2/6 則</span></li></ul></section>
+      <section class="box"><h3>🧩 藏寶圖碎片</h3><ul class="list"><li><span class="li-name">蘆葦河</span><span class="li-meta"><span class="pips"><i class="on"></i><i class="off"></i><i class="off"></i></span> 1/3</span></li><li><span class="li-name">??? <small>祕境 08</small></span><span class="li-meta"><span class="pips"><i class="on"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i></span> 1/5</span></li></ul></section>
+      <section class="box"><h3>📦 寶箱</h3><div class="empty">沒有待開的箱子。</div></section>
+    </div>
+    </div>
+
+  <footer>未收錄的格子連名字都沒寫進這頁 —— 盲玩不被劇透</footer>
+</div>
+<script>
+(function(){
+  var tabs=document.querySelectorAll('nav button');
+  var panels=document.querySelectorAll('.panel');
+  function show(id){
+    for(var i=0;i<tabs.length;i++){
+      var on=tabs[i].getAttribute('data-target')===id;
+      tabs[i].setAttribute('aria-selected',on?'true':'false');
+    }
+    for(var j=0;j<panels.length;j++){
+      if(panels[j].id===id){panels[j].className='panel show';}
+      else{panels[j].className='panel';}
+    }
+    try{window.localStorage.setItem('fishdash-tab',id);}catch(e){}
+  }
+  for(var k=0;k<tabs.length;k++){
+    (function(btn){
+      btn.addEventListener('click',function(){show(btn.getAttribute('data-target'));});
+    })(tabs[k]);
+  }
+  var saved=null;
+  try{saved=window.localStorage.getItem('fishdash-tab');}catch(e){}
+  show(document.getElementById(saved)?saved:'tab-dex');
+})();
+</script>
+</body>
+</html>
