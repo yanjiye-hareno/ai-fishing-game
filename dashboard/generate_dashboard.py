@@ -15,6 +15,8 @@
      位置會反推出稀有度分布，等於間接劇透。
   4. 進度只給總數，不給各稀有度的分母（分母會洩漏「還有幾種沒收」的結構）。
   5. 本檔程式碼與註解不出現任何物種名稱，全部從引擎動態讀取。
+  6. 像素圖示只對「存檔裡已收錄」的物種生成；未收錄一律共用同一枚問號圖示，
+     不畫各自剪影——體型輪廓本身也是線索。
 """
 
 import hashlib
@@ -94,6 +96,453 @@ def fmt_size(value):
     return ("%.1f" % num).rstrip("0").rstrip(".")
 
 
+# ────────────────────────── 像素圖示 ──────────────────────────
+#
+# 【防劇透】本節兩張對照表（形態、色相）只收「目前已收錄物種身上出現過的
+# 字與標籤」；沒命中就走通用款，所以表本身不含任何未收錄物種的資訊，日後
+# 收錄新物種也不需要改碼。未收錄的格子根本不會走進這裡——它們共用一枚寫死
+# 的問號圖示。
+#
+# 畫布 14×10，輸出時放大整數 2 倍（28×20 CSS px）＋ shape-rendering:crispEdges，
+# 邊緣才會硬、不糊。字元：o 描邊/暗部、b 主色、l 高光、a 稀有度強調色、
+# e 眼睛、d 暗色（問號／鎖）、. 透明。
+
+PX_W = 14
+PX_H = 10
+
+SHAPES = {
+    # 通用魚形（沒命中形態表的一律走這張）
+    "fish": (
+        ".....aa.......",
+        "...aaoooo.....",
+        "..obbbbbbo.oo.",
+        ".obbllbbbbboa.",
+        "obeblllbbbbbba",
+        "obeblllbbbbbba",
+        ".obbllbbbbboa.",
+        "..obbbbbbo.oo.",
+        "...aaoooo.....",
+        ".....aa.......",
+    ),
+    "eel": (
+        "...........aaa",
+        "........ooaao.",
+        ".....ooobblo..",
+        "...oobbbblo...",
+        ".oobbbbblo....",
+        "obebbbbblo....",
+        ".oobbbbbblo...",
+        "...ooooooo....",
+        "..............",
+        "..............",
+    ),
+    "ray": (
+        "..............",
+        "...oooo.......",
+        "..obbbbo......",
+        ".obbbbbbo.....",
+        "obebbbbbbo....",
+        "obebllbbbboaaa",
+        ".obbbbbbo.....",
+        "..obbbbo......",
+        "...oooo.......",
+        "..............",
+    ),
+    "shrimp": (
+        "a.............",
+        ".aa...........",
+        "...oooooo.....",
+        "..obbbbbbbo...",
+        ".obebbllbbbbo.",
+        ".obbbbbbbbbboa",
+        "..obbbbbbbbo.a",
+        "...oaoaoaoo.a.",
+        "....a.a.a.....",
+        "..............",
+    ),
+    "snail": (
+        ".....oooo.....",
+        "...oobbbboo...",
+        "..obblllbbbo..",
+        "..obloooolbo..",
+        "..oblobbolbo..",
+        "..obbloollbo..",
+        "...oobbbbboo..",
+        "aa..oobbbboo..",
+        ".aaoaaaaaaaao.",
+        "..............",
+    ),
+    "catfish": (
+        "..............",
+        "......ooo.....",
+        "..ooobbbboo.oo",
+        ".obbbbbbbbbooo",
+        "obeblbbbbbbboo",
+        "obeblbbbbbbboo",
+        ".obbbbbbbbbooo",
+        "aaoobbbbboo.oo",
+        ".aa...ooo.....",
+        "..............",
+    ),
+    "newt": (
+        "..............",
+        "..............",
+        "...oooo.......",
+        "..obbbboooo...",
+        "obebbbbbbbbboo",
+        "obebbllbbbbboo",
+        ".obbbbbbbbbbo.",
+        "..oao....oao..",
+        "..a.a....a.a..",
+        "..............",
+    ),
+    "wyrm": (
+        "aa.aa.........",
+        ".aoooa........",
+        "obebbbo.......",
+        "obbbllbo......",
+        ".oobbbbboo....",
+        "...oobbbbbbo..",
+        ".....oobbbbbo.",
+        ".......obbbbbo",
+        "........oobboa",
+        "...........aaa",
+    ),
+    "puffer": (
+        "..a...aa......",
+        ".aoooobbooa...",
+        "aobbbbbbbboa..",
+        "obellbbbbbbbaa",
+        "obebllbbbbbbba",
+        "aobbbbbbbbboa.",
+        ".aoobbbbbboa..",
+        "..aooooooa.a..",
+        "...a..aa......",
+        "..............",
+    ),
+    # 未收錄專用：所有未收錄格子共用這一張，零差異
+    "unknown": (
+        "..............",
+        "....dddd......",
+        "...dd..dd.....",
+        "........dd....",
+        ".......dd.....",
+        "......dd......",
+        "......dd......",
+        "..............",
+        "......dd......",
+        "..............",
+    ),
+    # 未解鎖釣點專用：共用同一枚鎖
+    "lock": (
+        "..............",
+        ".....dddd.....",
+        "....dd..dd....",
+        "....dd..dd....",
+        "..dddddddddd..",
+        "..dddd..dddd..",
+        "..dddd..dddd..",
+        "..dddddddddd..",
+        "..dddddddddd..",
+        "..............",
+    ),
+    # 地形（只有已解鎖釣點會用到；沒命中走 water）
+    "pond": (
+        "..............",
+        ".........aaa..",
+        ".........aaaa.",
+        ".........aaa..",
+        "...bbbbbbbb...",
+        ".bbbbbbbbbbbb.",
+        "bbbllbbbbbbbbb",
+        "bbbbbbbbllbbbb",
+        ".bbbbbbbbbbbb.",
+        "...bbbbbbbb...",
+    ),
+    "river": (
+        "..aa..aa...aa.",
+        "..a...a....a..",
+        "..a...a....a..",
+        "..a...a....a..",
+        "bbbbbbbbbbbbbb",
+        "bbllbbbbllbbbb",
+        "bbbbbbbbbbbbbb",
+        "bbbbllbbbbllbb",
+        "bbbbbbbbbbbbbb",
+        "bbllbbbbbbbbll",
+    ),
+    "falls": (
+        "....l....l....",
+        "...l.l..l.l...",
+        "....l....l....",
+        "....a.....a...",
+        "...aa....aaa..",
+        "..aaa....aaa..",
+        "..aaa...aaaa..",
+        ".bbbbbbbbbbbb.",
+        "bbbllbbbbllbbb",
+        ".bbbbbbbbbbbb.",
+    ),
+    "water": (
+        "..............",
+        "..............",
+        "..............",
+        "...ll....ll...",
+        "bbbbbbbbbbbbbb",
+        "bbllbbbbllbbbb",
+        "bbbbbbbbbbbbbb",
+        "bbbbllbbbbllbb",
+        "bbbbbbbbbbbbbb",
+        "bbllbbbbbbbbll",
+    ),
+}
+
+# 形態對照：只收「已收錄物種名稱裡出現過的字」，其餘一律通用魚形。
+SHAPE_BY_CHAR = (
+    ("鰻鰍", "eel"),
+    ("蝦", "shrimp"),
+    ("蝸螺", "snail"),
+    ("鯰", "catfish"),
+    ("鰩", "ray"),
+    ("螈", "newt"),
+    ("龍", "wyrm"),
+    ("魨", "puffer"),
+)
+
+# 地形對照：只收「已解鎖釣點名稱裡出現過的字」，其餘一律通用水面。
+TERRAIN_BY_CHAR = (
+    ("瀑泉", "falls"),
+    ("塘池", "pond"),
+    ("河", "river"),
+)
+
+# 標籤 → 色相族：(標籤, 基準色相, 飽和倍率, 允許的色相飄移)
+# 只收「已收錄物種身上出現過的標籤」，照順序取第一個命中的；都沒命中就用
+# id 雜湊決定色相（仍然穩定，同一個 id 每次長一樣）。
+TAG_HUE = (
+    ("fire", 12, 1.00, 26),
+    ("crystal", 186, 0.95, 16),
+    ("mineral", 46, 0.85, 18),
+    ("fantasy", 288, 1.00, 20),
+    ("nocturnal", 232, 0.95, 16),
+    ("armored", 210, 0.55, 14),
+    ("underwater", 199, 0.90, 18),
+    ("freshwater", 140, 0.85, 30),
+)
+
+# 稀有度 → (飽和度, 明度) 基準，稀有的更亮更飽和
+RARITY_TONE = {
+    "common": (46, 50),
+    "uncommon": (56, 53),
+    "rare": (66, 56),
+    "epic": (74, 59),
+    "legendary": (82, 62),
+    "mythic": (90, 66),
+}
+DEFAULT_TONE = (50, 52)
+
+TERRAIN_PALETTE = {
+    "pond": {"b": "#1d4f6b", "l": "#7fd8e8", "a": "#e8dfa8"},
+    "river": {"b": "#1f5a58", "l": "#74d6c0", "a": "#7fae55"},
+    "falls": {"b": "#2a4f68", "l": "#ffc98f", "a": "#dff0ff"},
+    "water": {"b": "#1d4f6b", "l": "#6fc7de", "a": "#6fc7de"},
+}
+LOCK_INK = "#2b4a63"
+# 未收錄問號：本體壓暗、右下描一圈微亮刻痕，做成「凹進去的空插槽」。
+# 58 格同時鋪開時，平塗的高對比會變成一片噪點；有層次但低對比才安靜。
+UNKNOWN_INK = "#1c3245"
+UNKNOWN_EDGE = "#2c4c68"
+
+
+PX_CHARS = set(".oblmaed")
+
+
+def _check_shapes():
+    for key, rows in SHAPES.items():
+        if len(rows) != PX_H:
+            raise ValueError("圖形 %s 應有 %d 列，實際 %d" % (key, PX_H, len(rows)))
+        for i, row in enumerate(rows):
+            if len(row) != PX_W:
+                raise ValueError("圖形 %s 第 %d 列寬 %d，應為 %d" % (key, i, len(row), PX_W))
+            bad = set(row) - PX_CHARS
+            if bad:
+                raise ValueError("圖形 %s 第 %d 列有非法字元 %r" % (key, i, sorted(bad)))
+
+
+_check_shapes()
+
+
+def _hash_bytes(text):
+    """id → 一串穩定的整數（不用 random，重跑結果永遠一樣）。"""
+    return list(bytearray(hashlib.sha1(text.encode("utf-8")).digest()))
+
+
+def _hsl_hex(hue, sat, lum):
+    hue = float(hue) % 360.0
+    sat = max(0.0, min(100.0, float(sat))) / 100.0
+    lum = max(0.0, min(100.0, float(lum))) / 100.0
+    c = (1.0 - abs(2.0 * lum - 1.0)) * sat
+    x = c * (1.0 - abs((hue / 60.0) % 2.0 - 1.0))
+    m = lum - c / 2.0
+    seg = int(hue // 60) % 6
+    rgb = [(c, x, 0), (x, c, 0), (0, c, x), (0, x, c), (x, 0, c), (c, 0, x)][seg]
+    return "#%02x%02x%02x" % tuple(int(round((v + m) * 255)) for v in rgb)
+
+
+def _shape_for(name):
+    for chars, shape in SHAPE_BY_CHAR:
+        for ch in chars:
+            if ch in name:
+                return shape
+    return "fish"
+
+
+def _terrain_for(name):
+    for chars, shape in TERRAIN_BY_CHAR:
+        for ch in chars:
+            if ch in name:
+                return shape
+    return "water"
+
+
+def _fish_palette(fid, tags, rarity):
+    hv = _hash_bytes(fid)
+    hue = None
+    sat_mult = 1.0
+    for tag, base_hue, mult, spread in TAG_HUE:
+        if tag in tags:
+            hue = (base_hue + (hv[0] % (2 * spread + 1)) - spread) % 360
+            sat_mult = mult
+            break
+    if hue is None:
+        hue = (hv[0] * 360 // 256) % 360
+    sat, lum = RARITY_TONE.get(rarity, DEFAULT_TONE)
+    sat = sat * sat_mult
+    lum = lum + (hv[1] % 7) - 3
+    # 眼睛跟著主色明暗反轉：主色夠亮就用暗瞳，主色本身很暗就改亮瞳，
+    # 否則暗系的魚在深色底板上會被看成「頭上破了一個洞」。
+    if lum >= 46:
+        eye = _hsl_hex(hue, min(100, sat + 20), max(8, lum - 36))
+    else:
+        eye = _hsl_hex(hue - 12, max(0, sat - 26), min(94, lum + 34))
+    return {
+        "o": _hsl_hex(hue - 6, min(100, sat + 12), max(10, lum - 26)),
+        "b": _hsl_hex(hue, sat, lum),
+        "m": _hsl_hex(hue - 4, max(0, sat - 8), min(92, lum + 14)),
+        "l": _hsl_hex(hue - 10, max(0, sat - 14), min(94, lum + 20)),
+        "a": RARITY_COLOR.get(rarity, FALLBACK_COLOR),
+        "e": eye,
+    }
+
+
+def _apply_pattern(rows, fid):
+    """依 id 決定花紋（無／斜紋／點斑），只把主色格換成鄰近的中間色。
+
+    刻意用中間色而不是高光色：對比拉太大會把輪廓切碎，小圖示會看不出形狀。
+    """
+    hv = _hash_bytes(fid)
+    mode = hv[2] % 3
+    if mode == 0:
+        return rows
+    off = hv[3] % 5
+    out = []
+    for y, row in enumerate(rows):
+        chars = list(row)
+        for x, ch in enumerate(chars):
+            if ch != "b":
+                continue
+            if mode == 1 and (x + y + off) % 5 == 0:
+                chars[x] = "m"
+            elif mode == 2 and (x + off) % 3 == 1 and (y + off) % 3 == 1:
+                chars[x] = "m"
+        out.append("".join(chars))
+    return out
+
+
+def _rects(rows, ch):
+    """把某個字元的格子壓成最少的矩形：先併同列橫向，再併上下同寬的。"""
+    runs = []  # (y, x, w)
+    for y, row in enumerate(rows):
+        x = 0
+        while x < len(row):
+            if row[x] == ch:
+                w = 0
+                while x + w < len(row) and row[x + w] == ch:
+                    w += 1
+                runs.append([y, x, w, 1])
+                x += w
+            else:
+                x += 1
+    merged = []
+    for run in runs:
+        for prev in merged:
+            if prev[1] == run[1] and prev[2] == run[2] and prev[0] + prev[3] == run[0]:
+                prev[3] += 1
+                break
+        else:
+            merged.append(run)
+    return merged
+
+
+def _svg_body(rows, colors):
+    parts = []
+    for ch in sorted(set("".join(rows)) - {"."}):
+        color = colors.get(ch)
+        if not color:
+            continue
+        d = "".join(
+            "M%d %dh%dv%dH%dz" % (x, y, w, h, x) for y, x, w, h in _rects(rows, ch)
+        )
+        if d:
+            parts.append('<path fill="%s" d="%s"/>' % (color, d))
+    return "".join(parts)
+
+
+def px_icon(rows, colors, extra_class=""):
+    cls = "pxi" + (" " + extra_class if extra_class else "")
+    return '<svg class="%s" viewBox="0 0 %d %d" aria-hidden="true">%s</svg>' % (
+        cls, PX_W, PX_H, _svg_body(rows, colors),
+    )
+
+
+def fish_icon(fish):
+    """已收錄物種的小圖示：形態看名稱、配色看標籤＋稀有度、花紋看 id 雜湊。"""
+    fid = fish.get("id", "")
+    rows = _apply_pattern(list(SHAPES[_shape_for(fish.get("name", ""))]), fid)
+    return px_icon(rows, _fish_palette(fid, set(fish.get("tags", []) or []), fish.get("rarity", "")))
+
+
+def _emboss(rows, body="d", edge="l"):
+    """在右緣描一道亮邊，做出刻痕般的立體感（單色圖示專用）。
+
+    只往右不往下：往下會把筆畫之間的留白填掉，問號的點就跟豎黏成一塊。
+    """
+    out = [list(r) for r in rows]
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            if ch == body and x + 1 < PX_W and row[x + 1] != body:
+                out[y][x + 1] = edge
+    return ["".join(r) for r in out]
+
+
+def unknown_icon():
+    """未收錄格子共用——所有格子輸出完全一樣的字串。"""
+    return px_icon(
+        _emboss(SHAPES["unknown"]),
+        {"d": UNKNOWN_INK, "l": UNKNOWN_EDGE},
+        "px-unknown",
+    )
+
+
+def terrain_icon(name):
+    shape = _terrain_for(name)
+    return px_icon(SHAPES[shape], TERRAIN_PALETTE[shape], "px-loc")
+
+
+def lock_icon():
+    return px_icon(SHAPES["lock"], {"d": LOCK_INK}, "px-loc px-lock")
+
+
 # ────────────────────────── 分頁：圖鑑 ──────────────────────────
 
 def build_dex(fish_table, rarity_table, enc):
@@ -120,16 +569,17 @@ def build_dex(fish_table, rarity_table, enc):
         '<i class="%s"></i>' % ("on" if (i * total) < (got * 24) else "off") for i in range(24)
     )
 
+    unknown = unknown_icon()  # 只算一次，63 格共用同一份字串
     cells = []
     for idx, fid in enumerate(order, start=1):
         num = "%02d" % idx
         rec = enc.get(fid)
         if not rec:
-            # 未收錄：只有編號與剪影，不寫入任何來自引擎的欄位
+            # 未收錄：編號 + 統一問號圖示，不寫入任何來自引擎的欄位。
+            # 圖示對每一格都完全相同——各自剪影會洩漏體型。
             cells.append(
-                '<div class="cell locked"><div class="num">#%s</div>'
-                '<div class="silhouette">?<span>?</span>?</div>'
-                '<div class="lockedtag">未收錄</div></div>' % num
+                '<div class="cell locked"><div class="num">#%s</div>%s'
+                '<div class="lockedtag">未收錄</div></div>' % (num, unknown)
             )
             continue
         f = fish_table[fid]
@@ -140,7 +590,7 @@ def build_dex(fish_table, rarity_table, enc):
         unit = f.get("size_unit", "cm")
         cells.append(
             '<div class="cell got" style="--c:%s">'
-            '<div class="num">#%s</div>'
+            '<div class="cellhead"><div class="num">#%s</div>%s</div>'
             '<div class="fname">%s</div>'
             '<div class="rar">%s<span class="tag">%s</span></div>'
             '<div class="stat"><span>最大</span><b>%s %s</b></div>'
@@ -150,6 +600,7 @@ def build_dex(fish_table, rarity_table, enc):
             % (
                 color,
                 num,
+                fish_icon(f),
                 esc(f.get("name", "")),
                 esc(label),
                 esc(tag),
@@ -207,6 +658,7 @@ def build_map(loc_table, season_table, save):
     dive_unlocked = list(save.get("dive_unlocked", []))
     frags = save.get("map_fragments", {}) or {}
     labels = masked_labels(loc_table, save)
+    lock = lock_icon()  # 未解鎖釣點共用同一份字串
 
     rows = []
     for loc in map_order(loc_table, save):
@@ -215,12 +667,13 @@ def build_map(loc_table, season_table, save):
         is_current = lid == current
         if not is_unlocked:
             # 未解鎖：名稱遮蔽，只留解鎖點數（商店本來就看得到）
+            # 未解鎖：一律同一枚鎖圖示，不依釣點屬性變化
             rows.append(
                 '<div class="cell loc locked">'
-                '<div class="loc-top"><span class="mark">🔒</span>'
+                '<div class="loc-top">%s'
                 '<span class="loc-name">%s</span></div>'
                 '<div class="loc-cost">%d 點解鎖</div>'
-                "</div>" % (labels[lid], int(loc.get("unlock_cost", 0) or 0))
+                "</div>" % (lock, labels[lid], int(loc.get("unlock_cost", 0) or 0))
             )
             continue
 
@@ -241,13 +694,14 @@ def build_map(loc_table, season_table, save):
             )
         rows.append(
             '<div class="cell loc %s">'
-            '<div class="loc-top"><span class="mark">%s</span>'
+            '<div class="loc-top">%s<span class="mark">%s</span>'
             '<span class="loc-name">%s</span></div>'
             '<div class="loc-desc">%s</div>'
             '<div class="loc-meta"><span class="badge">季節 %s</span>%s</div>'
             "</div>"
             % (
                 "here" if is_current else "open",
+                terrain_icon(loc.get("name", "")),
                 "✦" if is_current else "·",
                 esc(loc.get("name", "")),
                 esc(loc.get("description", "")),
@@ -529,10 +983,17 @@ nav button[aria-selected="true"]{
   box-shadow:3px 3px 0 var(--shadow);padding:8px;position:relative;min-height:96px;
 }
 .cell .num{font-size:10px;color:var(--ink-faint);letter-spacing:.1em}
+/* 像素圖示：固定 42×30（畫布 14×10 的整數 3 倍），硬邊不做抗鋸齒 */
+.pxi{
+  display:block;width:42px;height:30px;flex:0 0 auto;
+  shape-rendering:crispEdges;image-rendering:pixelated;
+}
+.cellhead{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:30px}
 .cell.got{
   border:2px solid var(--c);background:#102235;
   box-shadow:3px 3px 0 var(--shadow),0 0 10px -2px var(--c);
 }
+.cell.got .pxi{filter:drop-shadow(1px 1px 0 var(--shadow))}
 .cell.got .fname{font-size:14px;margin:3px 0 4px;color:var(--ink);word-break:break-all}
 .cell.got .rar{font-size:11px;color:var(--c);margin-bottom:6px}
 .cell.got .tag{
@@ -547,16 +1008,15 @@ nav button[aria-selected="true"]{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
 }
 .cell.locked .num{position:absolute;top:6px;left:8px;color:#2b4a63}
-.cell.locked .silhouette{
-  font-size:18px;letter-spacing:.18em;color:#183248;opacity:.6;text-shadow:2px 2px 0 #050c14;
-}
-.cell.locked .silhouette span{color:#1d3c55}
+.cell.locked .pxi{opacity:.9}
 .cell.locked .lockedtag{font-size:10px;color:#28485f;letter-spacing:.16em}
 .cell.loc{min-height:auto;display:block}
 .cell.loc.here{border-color:var(--accent)}
 .cell.loc.open{border-color:var(--line2)}
-.loc-top{display:flex;align-items:baseline;gap:7px;margin-bottom:5px}
+.loc-top{display:flex;align-items:center;gap:7px;margin-bottom:5px}
 .loc-top .mark{color:var(--accent2)}
+.px-loc{filter:drop-shadow(1px 1px 0 var(--shadow))}
+.px-lock{opacity:.85;filter:none}
 .loc-name{font-size:14px;letter-spacing:.06em}
 .loc-name small{font-size:10px;color:var(--ink-faint);letter-spacing:.1em}
 .loc-desc{font-size:11px;color:var(--ink-faint);line-height:1.6;margin-bottom:8px}
