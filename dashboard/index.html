@@ -24,6 +24,20 @@ body{
   padding:14px 12px 48px;
 }
 .wrap{max-width:1080px;margin:0 auto}
+/* 回家的路：手機全螢幕開這頁沒有瀏覽器返回鍵，這兩顆得一直看得到 */
+.homebar{
+  position:sticky;top:0;z-index:20;display:flex;gap:6px;flex-wrap:wrap;
+  padding:6px 0 8px;margin-bottom:6px;background:var(--bg);border-bottom:2px solid var(--line);
+}
+.hb{
+  font:inherit;font-size:12px;letter-spacing:.1em;text-decoration:none;
+  color:var(--ink-dim);background:var(--panel);border:2px solid var(--line);
+  box-shadow:3px 3px 0 var(--shadow);padding:6px 10px;display:inline-flex;align-items:center;gap:6px;
+}
+.hb:hover{color:var(--ink);border-color:var(--line2)}
+.hb:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--shadow)}
+.hb.alt{color:var(--accent2);border-color:#6a5a2e}
+.hb.alt:hover{border-color:var(--accent2)}
 header{
   border:2px solid var(--line2);background:var(--panel);
   box-shadow:4px 4px 0 var(--shadow);padding:14px 14px 12px;margin-bottom:12px;
@@ -159,6 +173,10 @@ footer{margin-top:22px;font-size:10px;color:var(--ink-faint);text-align:center;l
 </head>
 <body>
 <div class="wrap">
+  <nav class="homebar" aria-label="離開這一頁">
+    <a class="hb" href="/">⌂ 玄關</a>
+    <a class="hb alt" href="/arcade">⚄ 遊樂園</a>
+  </nav>
   <header>
     <h1><span class="rod">🎣</span> 霽野的釣魚池</h1>
     <div class="headmeta">
